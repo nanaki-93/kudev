@@ -1,0 +1,3 @@
+app_name: myapp
+namespace: default
+dockerfile_path: ./Dockerfile
