@@ -1,4 +1,4 @@
-# Phase 1: Core Foundation (CLI & Config)
+sta# Phase 1: Core Foundation (CLI & Config)
 
 **Objective**: Create a tool that can "speak" to the user and read their intent. Establish the CLI structure, configuration schema, and context awareness to prevent accidental deployments.
 
