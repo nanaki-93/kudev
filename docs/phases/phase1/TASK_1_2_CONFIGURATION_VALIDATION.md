@@ -1203,17 +1203,17 @@ for _, v := range spec.Env {
 
 ## Checklist for Task 1.2
 
-- [ ] Create `pkg/config/validation.go`
-- [ ] Create `pkg/config/errors.go`
-- [ ] Create `pkg/config/validation_test.go`
-- [ ] Implement `Validate()` method
-- [ ] Implement `ValidateWithContext()` method
-- [ ] All validation functions work correctly
-- [ ] `ValidationError` formats messages nicely
-- [ ] All test cases pass
-- [ ] Test coverage >85%
-- [ ] Run: `go test ./pkg/config -v`
-- [ ] Run: `go test ./pkg/config -cover`
+- [X] Create `pkg/config/validation.go`
+- [X] Create `pkg/config/errors.go`
+- [X] Create `pkg/config/validation_test.go`
+- [X] Implement `Validate()` method
+- [X] Implement `ValidateWithContext()` method
+- [X] All validation functions work correctly
+- [X] `ValidationError` formats messages nicely
+- [X] All test cases pass
+- [] Test coverage >85%
+- [X] Run: `go test ./pkg/config -v`
+- [X] Run: `go test ./pkg/config -cover`
 
 ---
 
