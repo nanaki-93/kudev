@@ -6,48 +6,31 @@ import (
 )
 
 type ValidationError struct {
-	Details  []string
-	Examples []string
+	Errors []ErrorObj
 }
 
-//todo refactor
+type ErrorObj struct {
+	Detail  string
+	Example string
+}
 
-//	type ValidationError struct {
-//		ErrorObj []ErrorObj
-//	}
-//
-//	type ErrorObj struct{
-//		Detail string
-//		Example string
-//	}
 func (ve *ValidationError) Add(msg string) {
-	ve.Details = append(ve.Details, msg)
-	if len(ve.Examples) < len(ve.Details) {
-		ve.Examples = append(ve.Examples, "")
-	}
+	ve.Errors = append(ve.Errors, ErrorObj{Detail: msg})
+}
+func (ve *ValidationError) AddWithExample(msg string, example string) {
+	ve.Errors = append(ve.Errors, ErrorObj{Detail: msg, Example: example})
 }
 
-func (ve *ValidationError) AddExample(msg string) {
-	if len(ve.Details) == 0 {
-		return
-	}
-
-	if len(ve.Examples) < len(ve.Details) {
-		ve.Examples = append(ve.Examples, "")
-	}
-	ve.Examples[len(ve.Examples)-1] = msg
-}
 func (ve *ValidationError) Merge(other ValidationError) {
-	ve.Details = append(ve.Details, other.Details...)
-	ve.Examples = append(ve.Examples, other.Examples...)
+	ve.Errors = append(ve.Errors, other.Errors...)
 }
 
 func (ve *ValidationError) HasErrors() bool {
-	return len(ve.Details) > 0
+	return len(ve.Errors) > 0
 }
 
 func (ve *ValidationError) Error() string {
-	if len(ve.Details) == 0 {
+	if len(ve.Errors) == 0 {
 		return "no validation errors"
 	}
 
@@ -55,14 +38,14 @@ func (ve *ValidationError) Error() string {
 
 	sb.WriteString(fmt.Sprintf(
 		"Configuration validation failed (%d error%s):\n",
-		len(ve.Details),
-		pluralize(len(ve.Details)),
+		len(ve.Errors),
+		pluralize(len(ve.Errors)),
 	))
 
-	for i, _ := range ve.Details {
-		sb.WriteString(fmt.Sprintf(" %d. %s\n", i+1, ve.Details[i]))
-		if len(ve.Examples) > i && ve.Examples[i] != "" {
-			example := ve.Examples[i]
+	for i := range ve.Errors {
+		sb.WriteString(fmt.Sprintf(" %d. %s\n", i+1, ve.Errors[i].Detail))
+		if ve.Errors[i].Example != "" {
+			example := ve.Errors[i].Example
 			indentedExample := indentLines(example, "    ")
 			sb.WriteString(fmt.Sprintf("    Example:\n%s\n", indentedExample))
 		}

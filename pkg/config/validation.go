@@ -42,33 +42,30 @@ func (c *DeploymentConfig) validateMetadata() ValidationError {
 	var errs ValidationError
 
 	if c.Metadata.Name == "" {
-		errs.Add("metadata.name is required and cannot be empty")
-		errs.AddExample("metadata:\n  name: my-app")
+		errs.AddWithExample("metadata.name is required and cannot be empty", "metadata:\n  name: my-app")
 		return errs
 	}
 	if err := validateDNSName(c.Metadata.Name); err != nil {
-		errs.Add(fmt.Sprintf("metadata.name: %v", err))
-		errs.AddExample("metadata:\n  name: my-app  # lowercase, hyphens, alphanumeric")
+		errs.AddWithExample(fmt.Sprintf("metadata.name: %v", err),
+			"metadata:\n  name: my-app  # lowercase, hyphens, alphanumeric")
 	}
 
 	return errs
 }
 
 // ctx is passed for future cancellation support (e.g., if file system I/O)
-
 func (c *DeploymentConfig) validateSpec(ctx context.Context) ValidationError {
 	var errs ValidationError
 
 	spec := c.Spec
 	if spec.ImageName == "" {
-		errs.Add("spec.imageName is required")
-		errs.AddExample("spec:\n  imageName: my-app")
+		errs.AddWithExample("spec.imageName is required", "spec:\n  imageName: my-app")
 		// Don't return early - validate other fields too
 	}
 
 	if spec.DockerfilePath == "" {
-		errs.Add("spec.dockerfilePath is required")
-		errs.AddExample("spec:\n  dockerfilePath: ./Dockerfile")
+		errs.AddWithExample("spec.dockerfilePath is required",
+			"spec:\n  dockerfilePath: ./Dockerfile")
 	} else {
 		// Validate the dockerfile path (only if not empty)
 		if err := validateDockerfilePath(spec.DockerfilePath); err != nil {
@@ -77,24 +74,21 @@ func (c *DeploymentConfig) validateSpec(ctx context.Context) ValidationError {
 	}
 
 	if spec.Namespace == "" {
-		errs.Add("spec.namespace is required")
-		errs.AddExample("spec:\n  namespace: default")
+		errs.AddWithExample("spec.namespace is required", "spec:\n  namespace: default")
 		// Don't return early - let user see all problems
 	} else {
 		if err := validateDNSName(spec.Namespace); err != nil {
-			errs.Add(fmt.Sprintf("spec.namespace: %v", err))
-			errs.AddExample("spec:\n  namespace: default  # or: dev, prod-staging")
+			errs.AddWithExample(fmt.Sprintf("spec.namespace: %v", err), "spec:\n  namespace: default  # or: dev, prod-staging")
 		}
 	}
 
 	// === Numeric Constraints ===
 
 	if spec.Replicas < 1 {
-		errs.Add(fmt.Sprintf(
+		errs.AddWithExample(fmt.Sprintf(
 			"spec.replicas must be at least 1, got %d",
 			spec.Replicas,
-		))
-		errs.AddExample("spec:\n  replicas: 1")
+		), "spec:\n  replicas: 1")
 	}
 
 	if spec.Replicas > 100 {
@@ -105,13 +99,11 @@ func (c *DeploymentConfig) validateSpec(ctx context.Context) ValidationError {
 	// === Port Validation ===
 
 	if err := validatePort("spec.localPort", spec.LocalPort); err != nil {
-		errs.Add(err.Error())
-		errs.AddExample("spec:\n  localPort: 8080  # 1-65535")
+		errs.AddWithExample(err.Error(), "spec:\n  localPort: 8080  # 1-65535")
 	}
 
 	if err := validatePort("spec.servicePort", spec.ServicePort); err != nil {
-		errs.Add(err.Error())
-		errs.AddExample("spec:\n  servicePort: 8080  # 1-65535")
+		errs.AddWithExample(err.Error(), "spec:\n  servicePort: 8080  # 1-65535")
 	}
 
 	// === Environment Variables ===
@@ -124,8 +116,8 @@ func (c *DeploymentConfig) validateSpec(ctx context.Context) ValidationError {
 
 	if spec.ImageName != "" {
 		if err := validateImageName(spec.ImageName); err != nil {
-			errs.Add(fmt.Sprintf("spec.imageName: %v", err))
-			errs.AddExample("spec:\n  imageName: my-app  # lowercase, hyphens")
+			errs.AddWithExample(fmt.Sprintf("spec.imageName: %v", err),
+				"spec:\n  imageName: my-app  # lowercase, hyphens")
 		}
 	}
 
@@ -234,8 +226,8 @@ func validateEnv(vars []EnvVar) *ValidationError {
 	seenNames := make(map[string]bool)
 	for i, v := range vars {
 		if v.Name == "" {
-			errs.Add(fmt.Sprintf("env[%d].name is required", i))
-			errs.AddExample("env:\n- name: LOG_LEVEL\n  value: debug")
+			errs.AddWithExample(fmt.Sprintf("env[%d].name is required", i),
+				"env:\n- name: LOG_LEVEL\n  value: debug")
 			continue
 		}
 		if err := validateEnvVarName(v.Name); err != nil {

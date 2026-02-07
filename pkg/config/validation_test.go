@@ -361,8 +361,7 @@ func TestValidate_EnvVars(t *testing.T) {
 // TestValidationError_Format tests error message formatting.
 func TestValidationError_Format(t *testing.T) {
 	errs := ValidationError{}
-	errs.Add("metadata.name is required")
-	errs.AddExample("metadata:\n  name: my-app")
+	errs.AddWithExample("metadata.name is required", "metadata:\n  name: my-app")
 	errs.Add("spec.localPort must be 1-65535")
 
 	errStr := errs.Error()
