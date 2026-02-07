@@ -1,0 +1,14 @@
+apiVersion: kudev.io/v1alpha1
+kind: DeploymentConfig
+metadata:
+  name: test-app
+spec:
+  imageName: test-app
+  dockerfilePath: ./Dockerfile
+  namespace: default
+  replicas: 2
+  localPort: 8080
+  servicePort: 8080
+  env:
+    - name: LOG_LEVEL
+      value: debug

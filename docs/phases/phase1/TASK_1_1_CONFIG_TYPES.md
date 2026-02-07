@@ -600,19 +600,19 @@ package config
 
 ## Checklist for Task 1.1
 
-- [ ] Create `pkg/config/types.go`
-- [ ] Define `DeploymentConfig` struct with all fields
-- [ ] Define `ConfigMetadata` struct
-- [ ] Define `DeploymentSpec` struct
-- [ ] Define `EnvVar` struct
-- [ ] Add YAML tags: `yaml:"fieldName"`
-- [ ] Add JSON tags: `json:"fieldName"`
-- [ ] Add `omitempty` to optional fields
-- [ ] Write doc comments for all types
-- [ ] Write doc comments for all fields
-- [ ] Create `NewDeploymentConfig()` helper
-- [ ] Run `go fmt ./pkg/config`
-- [ ] Verify no compilation errors: `go build ./pkg/config`
+- [X] Create `pkg/config/types.go`
+- [X] Define `DeploymentConfig` struct with all fields
+- [X] Define `ConfigMetadata` struct
+- [X] Define `DeploymentSpec` struct
+- [X] Define `EnvVar` struct
+- [X] Add YAML tags: `yaml:"fieldName"`
+- [X] Add JSON tags: `json:"fieldName"`
+- [X] Add `omitempty` to optional fields
+- [X] Write doc comments for all types
+- [X] Write doc comments for all fields
+- [X] Create `NewDeploymentConfig()` helper
+- [X] Run `go fmt ./pkg/config`
+- [X] Verify no compilation errors: `go build ./pkg/config`
 
 ---
 
