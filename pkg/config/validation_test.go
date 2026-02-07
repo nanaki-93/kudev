@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -100,6 +102,58 @@ func TestValidate_Valid(t *testing.T) {
 		})
 	}
 }
+func TestValidate_Invalid(t *testing.T) {
+	tests := []struct {
+		name         string
+		cfg          *DeploymentConfig
+		expectErrors []string
+	}{
+		{
+			name: "invalid config",
+			cfg: &DeploymentConfig{
+				APIVersion: "kudev.io/aaaa1",
+				Kind:       "Deplroymane",
+				Metadata: MetadataConfig{
+					Name: "-myapp-",
+				},
+				Spec: SpecConfig{
+					ImageName:              "_MYAPP_",
+					DockerfilePath:         "./aaa.yaml",
+					Namespace:              "-default-",
+					Replicas:               0,
+					LocalPort:              77777,
+					ServicePort:            77779,
+					KubeContext:            "invalid context name format: with spaces",
+					BuildContextExclusions: []string{"", "/exclude1", "test\\exclude2"},
+				},
+			},
+			expectErrors: []string{
+				"apiVersion must be '" + DefaultAPIVersion + "', got 'kudev.io/aaaa1'",
+				"kind must be '" + DefaultKind + "', got 'Deplroymane'",
+				"metadata.name: must be DNS-1123 compliant (lowercase alphanumeric and hyphens only, cannot start/end with hyphen). ", "-myapp-",
+				"spec.namespace: must be DNS-1123 compliant (lowercase alphanumeric and hyphens only, cannot start/end with hyphen). ", "-default-",
+				"spec.replicas must be at least 1, got 0",
+				"localPort must be between 1 and 65535, got 77777",
+				"servicePort must be between 1 and 65535, got 77779",
+				"spec.imageName: must be lowercase alphanumeric and hypens only.", "_MYAPP_",
+				"spec.dockerfilePath: expected filename to contain 'Dockerfile', got 'aaa.yaml'",
+				"spec.kubeContext: invalid context name format:", "invalid context name format: with spaces",
+				"buildContextExclusions[0] cannot be empty",
+				"buildContextExclusions[1] should be relative path, not absolute: ", "/exclude1",
+				"buildContextExclusions[2] should use forward slashes, not backslashes: ", "test\\\\exclude2", "test/exclude2",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		errs := tt.cfg.Validate(context.Background())
+		for _, err := range tt.expectErrors {
+			if !stringContains(errs.Error(), err) {
+				t.Errorf("Error message %q does not contain %q", errs.Error(), err)
+			}
+		}
+	}
+}
 
 // TestValidate_RequiredFields tests validation of required fields.
 func TestValidate_RequiredFields(t *testing.T) {
@@ -109,6 +163,49 @@ func TestValidate_RequiredFields(t *testing.T) {
 		expectError bool
 		errorMsg    string
 	}{
+		{
+			name:        "missing config",
+			cfg:         nil,
+			expectError: true,
+			errorMsg:    "config is nil",
+		},
+		{
+			name: "missing apiVersion",
+			cfg: &DeploymentConfig{
+				APIVersion: "",
+				Kind:       "DeploymentConfig",
+				Metadata:   MetadataConfig{}, // Missing name
+				Spec: SpecConfig{
+					ImageName:      "app",
+					DockerfilePath: "./Dockerfile",
+					Namespace:      "default",
+					Replicas:       1,
+					LocalPort:      8080,
+					ServicePort:    8080,
+				},
+			},
+			expectError: true,
+			errorMsg:    ErrApiVersionRequired,
+		},
+
+		{
+			name: "missing kind",
+			cfg: &DeploymentConfig{
+				APIVersion: "kudev.io/v1alpha1",
+				Kind:       "",
+				Metadata:   MetadataConfig{}, // Missing name
+				Spec: SpecConfig{
+					ImageName:      "app",
+					DockerfilePath: "./Dockerfile",
+					Namespace:      "default",
+					Replicas:       1,
+					LocalPort:      8080,
+					ServicePort:    8080,
+				},
+			},
+			expectError: true,
+			errorMsg:    ErrKindRequired,
+		},
 		{
 			name: "missing metadata.name",
 			cfg: &DeploymentConfig{
@@ -382,6 +479,62 @@ func TestValidationError_Format(t *testing.T) {
 	}
 
 	t.Logf("Error output:\n%s", errStr)
+}
+
+func TestValidate_WithContext(t *testing.T) {
+	cfg := &DeploymentConfig{
+		APIVersion: "kudev.io/v1alpha1",
+		Kind:       "DeploymentConfig",
+		Metadata: MetadataConfig{
+			Name: "myapp",
+		},
+		Spec: SpecConfig{
+			ImageName:      "myapp",
+			DockerfilePath: "./Dockerfile",
+			Namespace:      "default",
+			Replicas:       1,
+			LocalPort:      8080,
+			ServicePort:    8080,
+		},
+	}
+
+	err := cfg.ValidateWithContext("src")
+	if err == nil {
+		t.Errorf("ValidateWithContext() should return an error")
+		return
+	}
+	if !stringContains(err.Error(), "spec.dockerfilePath '\"./Dockerfile\"' does not exist at src\\Dockerfile") {
+		t.Errorf("ValidateWithContext() has to return error: spec.dockerfilePath '\"./Dockerfile\"' does not exist at src\\Dockerfile, instead got: %s", err)
+	}
+}
+
+func TestValidate_DockerfilePath(t *testing.T) {
+	tests := []struct {
+		name        string
+		filePath    string
+		expectError bool
+		errMsg      string
+	}{
+		{name: "valid", filePath: "./Dockerfile", expectError: false},
+		{name: "empty", filePath: "", expectError: true, errMsg: "dockerfilePath cannot be empty"},
+		{name: "git suffix", filePath: ".git", expectError: true, errMsg: "dockerfile path cannot be .git"},
+		{name: "cannot be .kudev.yaml", filePath: ".kudev.yaml", expectError: true, errMsg: "dockerfile path cannot be .kudev.yaml"},
+		{name: "no dockerfile in the name", filePath: "aaa.yaml", expectError: true, errMsg: "expected filename to contain 'Dockerfile', got 'aaa.yaml'"},
+		{name: "abs dockerfile doesn't exists", filePath: filepath.Join(os.TempDir(), "nonexistent-dockerfile-test-file-that-does-not-exist-12345", "Dockerfile.dev"), expectError: true, errMsg: "does not exist"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDockerfilePath(tt.filePath)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("validateDockerfilePath(%q) got error = %v, expectError = %v", tt.filePath, err, tt.expectError)
+			}
+			if err != nil && tt.errMsg != "" {
+				if !stringContains(err.Error(), tt.errMsg) {
+					t.Errorf("Error message %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
 }
 
 // ============================================================

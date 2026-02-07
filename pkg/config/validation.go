@@ -10,6 +10,15 @@ import (
 	"strings"
 )
 
+const (
+	DefaultAPIVersion     = "kudev.io/v1alpha1"
+	DefaultKind           = "DeploymentConfig"
+	ErrApiVersionRequired = "apiVersion is required (should be: kudev.io/v1alpha1)"
+	ErrApiVersionInvalid  = "apiVersion must be '" + DefaultAPIVersion + "', got '%s'"
+	ErrKindRequired       = "kind is required (should be: DeploymentConfig)"
+	ErrKindInvalid        = "kind must be 'DeploymentConfig', got '%s'"
+)
+
 func (c *DeploymentConfig) Validate(ctx context.Context) error {
 	var errs ValidationError
 
@@ -17,15 +26,15 @@ func (c *DeploymentConfig) Validate(ctx context.Context) error {
 		return fmt.Errorf("config is nil")
 	}
 	if c.APIVersion == "" {
-		errs.Add("apiVersion is required (should be: kudev.io/v1alpha1)")
-	} else if c.APIVersion != "kudev.io/v1alpha1" {
-		errs.Add(fmt.Sprintf("apiVersion must be 'kudev.io/v1alpha1', got '%s'", c.APIVersion))
+		errs.Add(ErrApiVersionRequired)
+	} else if c.APIVersion != DefaultAPIVersion {
+		errs.Add(fmt.Sprintf(ErrApiVersionInvalid, c.APIVersion))
 	}
 
 	if c.Kind == "" {
-		errs.Add("kind is required (should be: DeploymentConfig)")
-	} else if c.Kind != "DeploymentConfig" {
-		errs.Add(fmt.Sprintf("kind must be 'DeploymentConfig', got '%s'", c.Kind))
+		errs.Add(ErrKindRequired)
+	} else if c.Kind != DefaultKind {
+		errs.Add(fmt.Sprintf(ErrKindInvalid, c.Kind))
 	}
 
 	errs.Merge(c.validateMetadata())
@@ -92,8 +101,7 @@ func (c *DeploymentConfig) validateSpec(ctx context.Context) ValidationError {
 	}
 
 	if spec.Replicas > 100 {
-		// Warning, not error (but we're only doing errors for now)
-		// Phase 4 can add warnings system
+		// Warning, not error (but we're only doing errors for now) Phase 4 can add warnings system
 	}
 
 	// === Port Validation ===

@@ -9,6 +9,12 @@ type ValidationError struct {
 	Errors []ErrorObj
 }
 
+const (
+	ErrNoValidationErrors    = "no validation errors"
+	ErrConfigValidationError = "Configuration validation failed (%d error%s):\n"
+	ExampleFormat            = "    Example:\n%s\n"
+)
+
 type ErrorObj struct {
 	Detail  string
 	Example string
@@ -31,13 +37,13 @@ func (ve *ValidationError) HasErrors() bool {
 
 func (ve *ValidationError) Error() string {
 	if len(ve.Errors) == 0 {
-		return "no validation errors"
+		return ErrNoValidationErrors
 	}
 
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf(
-		"Configuration validation failed (%d error%s):\n",
+		ErrConfigValidationError,
 		len(ve.Errors),
 		pluralize(len(ve.Errors)),
 	))
@@ -47,7 +53,8 @@ func (ve *ValidationError) Error() string {
 		if ve.Errors[i].Example != "" {
 			example := ve.Errors[i].Example
 			indentedExample := indentLines(example, "    ")
-			sb.WriteString(fmt.Sprintf("    Example:\n%s\n", indentedExample))
+
+			sb.WriteString(fmt.Sprintf(ExampleFormat, indentedExample))
 		}
 		sb.WriteString("\n")
 
@@ -78,5 +85,9 @@ type FieldError struct {
 }
 
 func (fe *FieldError) Error() string {
-	return fmt.Sprintf("%s: %s", fe.Field, fe.Message)
+	example := ""
+	if fe.Example != "" {
+		example = fmt.Sprintf("\n Example:%s", fe.Example)
+	}
+	return fmt.Sprintf("%s: %s %s", fe.Field, fe.Message, example)
 }
