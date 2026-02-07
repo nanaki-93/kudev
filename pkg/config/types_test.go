@@ -8,7 +8,7 @@ import (
 )
 
 func TestDeploymentConfig(t *testing.T) {
-	content, err := os.ReadFile("../../test/fixtures/test_config.yaml")
+	content, err := os.ReadFile("testdata/test_config.yaml")
 	if err != nil {
 		t.Fatalf("Error reading test config: %v", err)
 	}

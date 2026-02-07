@@ -1,56 +1,99 @@
 package config
 
 import (
-	"errors"
 	"fmt"
+	"strings"
 )
 
 type ValidationError struct {
+	Details  []string
+	Examples []string
+}
+
+//todo refactor
+
+//	type ValidationError struct {
+//		ErrorObj []ErrorObj
+//	}
+//
+//	type ErrorObj struct{
+//		Detail string
+//		Example string
+//	}
+func (ve *ValidationError) Add(msg string) {
+	ve.Details = append(ve.Details, msg)
+	if len(ve.Examples) < len(ve.Details) {
+		ve.Examples = append(ve.Examples, "")
+	}
+}
+
+func (ve *ValidationError) AddExample(msg string) {
+	if len(ve.Details) == 0 {
+		return
+	}
+
+	if len(ve.Examples) < len(ve.Details) {
+		ve.Examples = append(ve.Examples, "")
+	}
+	ve.Examples[len(ve.Examples)-1] = msg
+}
+func (ve *ValidationError) Merge(other ValidationError) {
+	ve.Details = append(ve.Details, other.Details...)
+	ve.Examples = append(ve.Examples, other.Examples...)
+}
+
+func (ve *ValidationError) HasErrors() bool {
+	return len(ve.Details) > 0
+}
+
+func (ve *ValidationError) Error() string {
+	if len(ve.Details) == 0 {
+		return "no validation errors"
+	}
+
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf(
+		"Configuration validation failed (%d error%s):\n",
+		len(ve.Details),
+		pluralize(len(ve.Details)),
+	))
+
+	for i, _ := range ve.Details {
+		sb.WriteString(fmt.Sprintf(" %d. %s\n", i+1, ve.Details[i]))
+		if len(ve.Examples) > i && ve.Examples[i] != "" {
+			example := ve.Examples[i]
+			indentedExample := indentLines(example, "    ")
+			sb.WriteString(fmt.Sprintf("    Example:\n%s\n", indentedExample))
+		}
+		sb.WriteString("\n")
+
+	}
+
+	return sb.String()
+}
+
+func pluralize(count int) string {
+	if count == 1 {
+		return ""
+	}
+	return "s"
+}
+
+func indentLines(text string, indent string) string {
+	lines := strings.Split(text, "\n")
+	for i := range lines {
+		lines[i] = indent + lines[i]
+	}
+	return strings.Join(lines, "\n")
+}
+
+type FieldError struct {
 	Field   string
 	Message string
+	Example string
 }
 
-type ValidationErrors struct {
-	Errors []ValidationError
-}
-
-func (e *ValidationErrors) Error() string {
-	if len(e.Errors) == 0 {
-		return "no error"
-	}
-
-	msg := "validation failed:\n"
-	for i, _ := range e.Errors {
-		err := e.Errors[i]
-		msg += fmt.Sprintf("  %d. %s: %s\n", i+1, err.Field, err.Message)
-	}
-
-	return msg
-
-}
-
-func (e *ValidationErrors) Add(field, message string) {
-	e.Errors = append(e.Errors, ValidationError{Field: field, Message: message})
-}
-
-func (e *ValidationErrors) HasErrors() bool {
-	return len(e.Errors) > 0
-}
-
-var ErrConfigNotFound = fmt.Errorf("config not found")
-var ErrInvalidDNSName = errors.New("name must be DNS-1123 compliant (lowercase letters, numbers, and hyphens only)")
-var ErrInvalidPort = errors.New("port must be between 1 and 65535")
-var ErrInvalidReplicas = errors.New("replicas must be at least 1")
-
-type ErrConfigLoadFailed struct {
-	Path  string
-	Cause error
-}
-
-func (e *ErrConfigLoadFailed) Error() string {
-	return fmt.Sprintf("failed to load config from %s: %v", e.Path, e.Cause)
-}
-
-func (e *ErrConfigLoadFailed) Unwrap() error {
-	return e.Cause
+func (fe *FieldError) Error() string {
+	return fmt.Sprintf("%s: %s", fe.Field, fe.Message)
 }
