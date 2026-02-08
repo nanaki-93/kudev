@@ -323,19 +323,21 @@ type EnvVar struct {
 
 // NewDeploymentConfig returns a configuration with K8s API defaults.
 // Used primarily for testing and initialization.
-func NewDeploymentConfig(name string) *DeploymentConfig {
+func NewDeploymentConfig(appName string) *DeploymentConfig {
 	return &DeploymentConfig{
 		APIVersion: "kudev.io/v1alpha1",
 		Kind:       "DeploymentConfig",
 		Metadata: MetadataConfig{
-			Name: name,
+			Name: appName,
 		},
 		Spec: SpecConfig{
-			ImageName:   name,
-			Namespace:   "default",
-			Replicas:    1,
-			LocalPort:   8080,
-			ServicePort: 8080,
+			ImageName:      appName,
+			DockerfilePath: "./Dockerfile",
+			Namespace:      "default",
+			Replicas:       1,
+			LocalPort:      8080,
+			ServicePort:    8080,
+			Env:            []EnvVar{},
 		},
 	}
 }
