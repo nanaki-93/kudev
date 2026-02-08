@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestFileConfigLoader_LoadFromPath tests loading from explicit path.
+// TestFileConfigLoader_LoadFromPath tests loading from explicit savePath.
 func TestFileConfigLoader_LoadFromPath(t *testing.T) {
 	// Create temporary config file
 	tmpDir := t.TempDir()
@@ -50,7 +50,7 @@ spec:
 // TestFileConfigLoader_LoadFromPath_NotFound tests error when file doesn't exist.
 func TestFileConfigLoader_LoadFromPath_NotFound(t *testing.T) {
 	loader := NewFileConfigLoader("", "", "")
-	_, err := loader.LoadFromPath(context.Background(), "/nonexistent/path/.kudev.yaml")
+	_, err := loader.LoadFromPath(context.Background(), "/nonexistent/savePath/.kudev.yaml")
 
 	if err == nil {
 		t.Fatalf("LoadFromPath() should return error for nonexistent file")
@@ -292,5 +292,129 @@ func TestIsProjectRoot(t *testing.T) {
 				t.Errorf("isProjectRoot() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestFileConfigLoader_Save(t *testing.T) {
+	tests := []struct {
+		name      string
+		savePath  string
+		fcl       *DeploymentConfig
+		expectErr bool
+	}{
+		{
+			name:      "empty save savePath",
+			savePath:  "",
+			fcl:       NewDeploymentConfig("test1"),
+			expectErr: true,
+		},
+
+		{
+			name:      "valid config file",
+			savePath:  "./testdata/config.yaml",
+			fcl:       NewDeploymentConfig("test1"),
+			expectErr: false,
+		},
+		{
+			name:      "with creating dir",
+			savePath:  "./testdata/testWithDir/nonexistent.yaml",
+			fcl:       NewDeploymentConfig("test2"),
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		fcl := NewFileConfigLoader("", "", "")
+		err := fcl.Save(context.Background(), tt.fcl, tt.savePath)
+		if (err != nil) != tt.expectErr {
+			t.Errorf("Save() error = %v, wantErr %v", err, tt.expectErr)
+		}
+		if err != nil {
+			continue
+		}
+		_, err = os.Stat(tt.savePath)
+		if err != nil && !os.IsNotExist(err) {
+			t.Errorf("Save() error checking file: %v", err)
+		} else if err == nil {
+			// Clean up after test
+			err = os.Remove(tt.savePath)
+			if err != nil {
+				t.Errorf("Error removing file: %v , remove it manually", err)
+			}
+
+			// Remove parent directory only if it's a subdirectory of testdata
+			parentDir := filepath.Dir(tt.savePath)
+			grandParentDir := filepath.Dir(parentDir)
+			if filepath.Base(grandParentDir) == "testdata" {
+				err = os.Remove(parentDir)
+				if err != nil && !os.IsNotExist(err) {
+					t.Errorf("Error removing directory: %v, remove it manually", err)
+				}
+			}
+
+		}
+	}
+}
+
+func TestFindConfigFile(t *testing.T) {
+	tests := []struct {
+		name         string
+		startDir     string
+		expectedPath string
+		expectedErr  bool
+	}{
+		{
+			name:         "no config file",
+			startDir:     filepath.Join("testdata", "noConfig"),
+			expectedPath: "",
+			expectedErr:  true,
+		},
+		{
+			name:         "config file not found with empty startDir",
+			startDir:     "",
+			expectedPath: "",
+			expectedErr:  true,
+		},
+		{
+			name:         "config file",
+			startDir:     filepath.Join("testdata", "config"),
+			expectedPath: filepath.Join("testdata", "config", ".kudev.yaml"),
+			expectedErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		path, err := FindConfigFile(tt.startDir)
+		if (err != nil) != tt.expectedErr {
+			t.Errorf("FindConfigFile() error = %v, wantErr %v", err, tt.expectedErr)
+		}
+		if path != tt.expectedPath {
+			t.Errorf("FindConfigFile() = %s, want %s", path, tt.expectedPath)
+		}
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		configPath  string
+		expectedErr bool
+	}{
+		{name: "no config file",
+			configPath:  filepath.Join("testdata", "noConfig"),
+			expectedErr: true},
+		{name: "valid config",
+			configPath:  filepath.Join("testdata", "config", ".kudev.yaml"),
+			expectedErr: false},
+	}
+
+	for _, tt := range tests {
+		config, err := LoadConfig(context.Background(), tt.configPath)
+		if (err != nil) != tt.expectedErr {
+			t.Errorf("LoadConfig() error = %v, wantErr %v", err, tt.expectedErr)
+		}
+		if config == nil && !tt.expectedErr {
+			t.Errorf("LoadConfig() returned nil config")
+		}
 	}
 }

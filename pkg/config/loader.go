@@ -89,7 +89,7 @@ func (fcl *FileConfigLoader) Load(ctx context.Context) (*DeploymentConfig, error
 	return nil, fcl.notFoundError()
 }
 
-// LoadFromPath loads configuration from a specific file path.
+// LoadFromPath loads configuration from a specific file savePath.
 //
 // Process:
 //  1. Read file
@@ -143,7 +143,7 @@ func (fcl *FileConfigLoader) LoadFromPath(ctx context.Context, path string) (*De
 // Overwrites existing file.
 func (fcl *FileConfigLoader) Save(ctx context.Context, cfg *DeploymentConfig, path string) error {
 	if path == "" {
-		return fmt.Errorf("save path cannot be empty")
+		return fmt.Errorf("save savePath cannot be empty")
 	}
 
 	if err := cfg.Validate(ctx); err != nil {
@@ -231,7 +231,7 @@ func (fcl *FileConfigLoader) notFoundError() error {
 	suggestion := []string{
 		"Run 'kudev init' to create a new .kudev.yaml.",
 		"Or place a .kudev.yaml file in your project root.",
-		"Or specify a path with: kudev --config <path>",
+		"Or specify a savePath with: kudev --config <savePath>",
 	}
 	return fmt.Errorf("configuration file (.kudev.yaml) not found \n\n"+
 		"Searched in :\n - %s\n\n"+
@@ -274,7 +274,7 @@ func DiscoverProjectRoot(startDir string) (string, error) {
 
 // FindConfigFile searches for .kudev.yaml configuration file.
 //
-// Returns the path to the config file or error if not found.
+// Returns the savePath to the config file or error if not found.
 func FindConfigFile(startDir string) (string, error) {
 	if startDir == "" {
 		var err error

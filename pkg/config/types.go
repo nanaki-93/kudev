@@ -73,10 +73,10 @@ type SpecConfig struct {
 	//   - Should match metadata.name in most cases
 	ImageName string `yaml:"imageName" json:"imageName"`
 
-	// DockerfilePath is the path to the Dockerfile relative to project root.
+	// DockerfilePath is the savePath to the Dockerfile relative to project root.
 	//
 	// Discovery algorithm:
-	//   1. If absolute path: use as-is
+	//   1. If absolute savePath: use as-is
 	//   2. If relative: resolve from project root
 	//   3. If file doesn't exist: validation will fail
 	//

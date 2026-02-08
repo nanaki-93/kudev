@@ -139,7 +139,7 @@ func TestValidate_Invalid(t *testing.T) {
 				"spec.dockerfilePath: expected filename to contain 'Dockerfile', got 'aaa.yaml'",
 				"spec.kubeContext: invalid context name format:", "invalid context name format: with spaces",
 				"buildContextExclusions[0] cannot be empty",
-				"buildContextExclusions[1] should be relative path, not absolute: ", "/exclude1",
+				"buildContextExclusions[1] should be relative savePath, not absolute: ", "/exclude1",
 				"buildContextExclusions[2] should use forward slashes, not backslashes: ", "test\\\\exclude2", "test/exclude2",
 			},
 		},
@@ -517,8 +517,8 @@ func TestValidate_DockerfilePath(t *testing.T) {
 	}{
 		{name: "valid", filePath: "./Dockerfile", expectError: false},
 		{name: "empty", filePath: "", expectError: true, errMsg: "dockerfilePath cannot be empty"},
-		{name: "git suffix", filePath: ".git", expectError: true, errMsg: "dockerfile path cannot be .git"},
-		{name: "cannot be .kudev.yaml", filePath: ".kudev.yaml", expectError: true, errMsg: "dockerfile path cannot be .kudev.yaml"},
+		{name: "git suffix", filePath: ".git", expectError: true, errMsg: "dockerfile savePath cannot be .git"},
+		{name: "cannot be .kudev.yaml", filePath: ".kudev.yaml", expectError: true, errMsg: "dockerfile savePath cannot be .kudev.yaml"},
 		{name: "no dockerfile in the name", filePath: "aaa.yaml", expectError: true, errMsg: "expected filename to contain 'Dockerfile', got 'aaa.yaml'"},
 		{name: "abs dockerfile doesn't exists", filePath: filepath.Join(os.TempDir(), "nonexistent-dockerfile-test-file-that-does-not-exist-12345", "Dockerfile.dev"), expectError: true, errMsg: "does not exist"},
 	}

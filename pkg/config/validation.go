@@ -76,7 +76,7 @@ func (c *DeploymentConfig) validateSpec(ctx context.Context) ValidationError {
 		errs.AddWithExample("spec.dockerfilePath is required",
 			"spec:\n  dockerfilePath: ./Dockerfile")
 	} else {
-		// Validate the dockerfile path (only if not empty)
+		// Validate the dockerfile savePath (only if not empty)
 		if err := validateDockerfilePath(spec.DockerfilePath); err != nil {
 			errs.Add(fmt.Sprintf("spec.dockerfilePath: %v", err))
 		}
@@ -173,11 +173,11 @@ func validateDockerfilePath(path string) error {
 	path = filepath.Clean(path)
 
 	if strings.HasSuffix(path, ".git") {
-		return fmt.Errorf("dockerfile path cannot be .git")
+		return fmt.Errorf("dockerfile savePath cannot be .git")
 	}
 
 	if strings.HasSuffix(path, ".kudev.yaml") {
-		return fmt.Errorf("dockerfile path cannot be .kudev.yaml")
+		return fmt.Errorf("dockerfile savePath cannot be .kudev.yaml")
 	}
 
 	base := filepath.Base(path)
@@ -197,7 +197,7 @@ func validateDockerfilePath(path string) error {
 			return fmt.Errorf("cannot access file '%s': %v", path, err)
 		}
 	}
-	// If relative path, we can't validate without knowing the project root
+	// If relative savePath, we can't validate without knowing the project root
 	// That happens in loader.go with full context
 
 	return nil
@@ -285,7 +285,7 @@ func validateBuildContextExclusions(exclusions []string) *ValidationError {
 		}
 
 		if strings.HasPrefix(exc, "/") {
-			errs.Add(fmt.Sprintf("buildContextExclusions[%d] should be relative path, not absolute: %q", i, exc))
+			errs.Add(fmt.Sprintf("buildContextExclusions[%d] should be relative savePath, not absolute: %q", i, exc))
 		}
 
 		if strings.Contains(exc, "\\") {
