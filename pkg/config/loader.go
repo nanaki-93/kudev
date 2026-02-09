@@ -61,7 +61,7 @@ func (fcl *FileConfigLoader) Load(ctx context.Context) (*DeploymentConfig, error
 		return cfg, nil
 	}
 
-	path, err := fcl.discover()
+	path, err := fcl.Discover()
 	if err == nil {
 		cfg, err := fcl.LoadFromPath(ctx, path)
 		if err != nil {
@@ -167,7 +167,7 @@ func (fcl *FileConfigLoader) Save(ctx context.Context, cfg *DeploymentConfig, pa
 
 }
 
-func (fcl *FileConfigLoader) discover() (string, error) {
+func (fcl *FileConfigLoader) Discover() (string, error) {
 	searchPaths := fcl.generateSearchPaths()
 	for _, path := range searchPaths {
 		configPath := filepath.Join(path, ".kudev.yaml")
@@ -284,7 +284,7 @@ func FindConfigFile(startDir string) (string, error) {
 		}
 	}
 	loader := FileConfigLoader{WorkingDir: startDir}
-	return loader.discover()
+	return loader.Discover()
 }
 
 // LoadConfig is a convenience function to load configuration with defaults.

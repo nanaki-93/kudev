@@ -125,7 +125,7 @@ spec:
 
 	// Simulate running kudev from componentDir
 	loader := NewFileConfigLoader("", projectDir, componentDir)
-	found, err := loader.discover()
+	found, err := loader.Discover()
 
 	if err != nil {
 		t.Fatalf("discover() error = %v", err)
