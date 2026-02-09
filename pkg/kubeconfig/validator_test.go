@@ -1,6 +1,7 @@
 package kubeconfig
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -107,6 +108,35 @@ func TestContextValidator_Validate(t *testing.T) {
 	}
 }
 
+func TestContextValidator_ValidateContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		context  string
+		expected bool
+	}{
+		{"docker-desktop is allowed", "docker-desktop", true},
+		{"minikube is allowed", "minikube", true},
+		{"kind-local is allowed", "kind-local", true},
+		{"prod-us-east-1 is blocked", "prod-us-east-1", false},
+		{"staging-aws is blocked", "staging-aws", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cv := &ContextValidator{
+				AllowedContexts: defaultAllowedContexts(),
+			}
+			err := cv.ValidateContext(tt.context)
+			if err != nil && tt.expected {
+				t.Errorf("Expected no error for allowed context %s, got: %v", tt.context, err)
+			}
+			if err == nil && !tt.expected {
+				t.Errorf("Expected error for blocked context %s, got nil", tt.context)
+			}
+		})
+	}
+}
+
 // TestContextValidator_ErrorMessage tests error message quality.
 func TestContextValidator_ErrorMessage(t *testing.T) {
 	cv := &ContextValidator{
@@ -166,6 +196,92 @@ func TestDefaultAllowedContexts(t *testing.T) {
 		if !found {
 			t.Errorf("Default contexts missing %q", expected)
 		}
+	}
+}
+
+func TestNewContextValidator(t *testing.T) {
+	// Create a fake kubeconfig
+	fakeKubeconfig := `
+apiVersion: v1
+kind: Config
+current-context: docker-desktop
+contexts:
+- context:
+    cluster: docker-desktop
+    user: docker-desktop
+  name: docker-desktop
+- context:
+    cluster: minikube
+    user: minikube
+  name: minikube
+clusters:
+- cluster:
+    server: https://localhost:6443
+  name: docker-desktop
+- cluster:
+    server: https://192.168.49.2:8443
+  name: minikube
+users:
+- name: docker-desktop
+- name: minikube
+`
+	// Write to a temp file
+	tmpFile, err := os.CreateTemp(t.TempDir(), "kubeconfig-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	if _, err := tmpFile.WriteString(fakeKubeconfig); err != nil {
+		t.Fatalf("Failed to write fake kubeconfig: %v", err)
+	}
+	tmpFile.Close()
+
+	// Point KUBECONFIG to the fake file
+	t.Setenv("KUBECONFIG", tmpFile.Name())
+
+	allowedContexts := defaultAllowedContexts()
+	availableContexts, _ := ListAvailableContexts()
+	cv, err := NewContextValidator(false)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(cv.AllowedContexts) != len(defaultAllowedContexts()) {
+		t.Fatalf("Expected %d contexts, got %d", len(allowedContexts), len(cv.AllowedContexts))
+	}
+	if cv.ForceContext {
+		t.Fatalf("Expected ForceContext to be false")
+	}
+	if len(cv.AllAvailableContexts) != 2 {
+		t.Fatalf("Expected %d contexts, got %d", 2, len(cv.AllAvailableContexts))
+	}
+	if len(cv.AllAvailableContexts) != len(availableContexts) {
+		t.Fatalf("Expected %d contexts, got %d", len(availableContexts), len(cv.AllAvailableContexts))
+	}
+
+	if cv.CurrentContext != "docker-desktop" {
+		t.Fatalf("Expected current context 'docker-desktop', got %q", cv.CurrentContext)
+	}
+}
+
+func TestWithAllowedContexts(t *testing.T) {
+	cv := &ContextValidator{}
+	cv.WithAllowedContexts([]string{"foo", "bar"})
+
+	if len(cv.AllowedContexts) != 2 {
+		t.Fatalf("Expected 2 allowed contexts, got %d", len(cv.AllowedContexts))
+	}
+	if cv.AllowedContexts[0] != "foo" {
+		t.Fatalf("Expected first allowed context to be 'foo', got %q", cv.AllowedContexts[0])
+	}
+	if cv.AllowedContexts[1] != "bar" {
+		t.Fatalf("Expected second allowed context to be 'bar', got %q", cv.AllowedContexts[1])
+	}
+}
+
+func TestContextValidator_WithCurrentContext(t *testing.T) {
+	cv := &ContextValidator{}
+	cv.WithCurrentContext("foo")
+	if cv.CurrentContext != "foo" {
+		t.Fatalf("Expected current context to be 'foo', got %q", cv.CurrentContext)
 	}
 }
 

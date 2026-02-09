@@ -20,7 +20,7 @@ func NewContextValidator(forceContext bool) (*ContextValidator, error) {
 	}
 	available, _ := ListAvailableContexts()
 	return &ContextValidator{
-		AllowedContexts:      available,
+		AllowedContexts:      defaultAllowedContexts(),
 		ForceContext:         forceContext,
 		CurrentContext:       current.Name,
 		AllAvailableContexts: available,
