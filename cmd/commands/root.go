@@ -71,7 +71,7 @@ func init() {
 //  4. Store for use by subcommands
 func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 	// Step 1: Setup logging
-	logging.Init(debugLogging)
+	logging.InitLogger(debugLogging)
 
 	// Step 2: Skip config loading for certain commands
 	// These commands don't need config:
