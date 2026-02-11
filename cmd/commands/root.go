@@ -3,26 +3,23 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/nanaki-93/kudev/pkg/config"
 	"github.com/nanaki-93/kudev/pkg/kubeconfig"
 	"github.com/nanaki-93/kudev/pkg/logging"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
-var (
-	configPath   string
-	debugLogging bool
-	forceContext bool
-
-	loadedConfig *config.DeploymentConfig
-
-	validator *kubeconfig.ContextValidator
-
-	rootCmd = &cobra.Command{
-		Use:   "kudev",
-		Short: "Kubernetes development helper",
-		Long: `Kudev streamlines local Kubernetes development with automatic building, deploying, and live-reloading
+var rootCmd = &cobra.Command{
+	Use:   "kudev",
+	Short: "Kubernetes development helper",
+	Long: `Kudev streamlines local Kubernetes development with automatic building, deploying, and live-reloading
 
 Kudev manages the full development cycle:
   - Build Docker images automatically
@@ -47,19 +44,24 @@ Examples:
 Documentation:
   https://github.com/nanaki-93/kudev
 `,
-		PersistentPreRunE: rootPersistentPreRun,
-		SilenceUsage:      true,
-	}
+	PersistentPreRunE: rootPersistentPreRun,
+	SilenceUsage:      true,
+	SilenceErrors:     true,
+}
+
+var (
+	configPath   string
+	debugMode    bool
+	forceContext bool
+	logger       logging.LoggerInterface
+	loadedConfig *config.DeploymentConfig
+	validator    *kubeconfig.ContextValidator
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "Path to the configuration file.")
-	rootCmd.PersistentFlags().BoolVar(&debugLogging, "debug", false, "Enable debug logging")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Config file path")
+	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&forceContext, "force-context", false, "Skip K8s context safety check (use with caution!)")
-
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(validateCmd)
 }
 
 // rootPersistentPreRun is the global initialization hook.
@@ -71,7 +73,7 @@ func init() {
 //  4. Store for use by subcommands
 func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 	// Step 1: Setup logging
-	logging.InitLogger(debugLogging)
+	logging.InitLogger(debugMode)
 
 	// Step 2: Skip config loading for certain commands
 	// These commands don't need config:
@@ -121,7 +123,7 @@ func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 //
 // Use this in subcommands to get the shared config instance.
 // Safe to call only after PersistentPreRun has executed.
-func GetLoadedConfig() *config.DeploymentConfig {
+func getLoadedConfig() *config.DeploymentConfig {
 	return loadedConfig
 }
 
@@ -133,10 +135,56 @@ func GetValidator() *kubeconfig.ContextValidator {
 // Execute runs the root command.
 // This is called from main().
 func Execute() error {
-	return rootCmd.Execute()
+	// Create context that cancels on SIGINT/SIGTERM
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Handle signals in goroutine
+	go func() {
+		sig := <-sigChan
+		fmt.Println() // New line after ^C
+		logger.Debug("received signal", "signal", sig)
+		cancel()
+
+		// If second signal, force exit
+		sig = <-sigChan
+		fmt.Println("\nForce exit...")
+		os.Exit(1)
+	}()
+
+	// Pass context to all commands
+	return rootCmd.ExecuteContext(ctx)
 }
 
-// RootCmd returns the root command (useful for testing).
-func RootCmd() *cobra.Command {
-	return rootCmd
+func getKubernetesClient() (kubernetes.Interface, *rest.Config, error) {
+	// Load kubeconfig from default location (~/.kube/config)
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	configOverrides := &clientcmd.ConfigOverrides{}
+	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+
+	restConfig, err := kubeConfig.ClientConfig()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load kubeconfig: %w", err)
+	}
+
+	clientset, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create kubernetes client: %w", err)
+	}
+
+	return clientset, restConfig, nil
+}
+
+func getCurrentContext() string {
+	currContext, err := kubeconfig.LoadCurrentContext()
+	if err != nil {
+		//fixme should i panic?
+		panic("failed to load current context: " + err.Error() + "")
+	}
+	return currContext.Name
+
 }

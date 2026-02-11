@@ -27,7 +27,7 @@ Examples:
 		logger := logging.Get()
 
 		// Config is already loaded in PersistentPreRun
-		cfg := GetLoadedConfig()
+		cfg := getLoadedConfig()
 
 		if cfg == nil {
 			return fmt.Errorf("no configuration loaded")

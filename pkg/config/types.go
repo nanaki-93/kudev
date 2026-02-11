@@ -28,6 +28,8 @@ type DeploymentConfig struct {
 	Metadata MetadataConfig `yaml:"metadata" json:"metadata"`
 	// Spec contains the deployment specification.
 	Spec SpecConfig `yaml:"spec" json:"spec"`
+
+	ProjectRoot string `yaml:"-" json:"-"`
 }
 
 // MetadataConfig follows K8s naming conventions.

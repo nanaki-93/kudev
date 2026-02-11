@@ -1,41 +1,14 @@
-// pkg/builder/docker/builder_test.go
-
 package docker
 
 import (
 	"testing"
 
 	"github.com/nanaki-93/kudev/pkg/builder"
-	"github.com/nanaki-93/kudev/pkg/logging"
+	"github.com/nanaki-93/kudev/test/util"
 )
 
-// mockLogger implements logging.Logger for testing
-type mockLogger struct {
-	messages []string
-}
-
-func (m *mockLogger) Info(msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-
-func (m *mockLogger) Error(err error, msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-
-func (m *mockLogger) Debug(msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-func (m *mockLogger) Warn(msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-func (m *mockLogger) WithValues(keysAndValues ...interface{}) logging.LoggerInterface {
-	return &mockLogger{
-		messages: m.messages,
-	}
-}
-
 func TestBuildCommandArgs(t *testing.T) {
-	logger := &mockLogger{}
+	logger := &util.MockLogger{}
 	db := NewBuilder(logger)
 
 	tests := []struct {

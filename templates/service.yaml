@@ -1,0 +1,18 @@
+# templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .AppName }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .AppName }}
+    managed-by: kudev
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .ServicePort }}
+      targetPort: {{ .ServicePort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .AppName }}

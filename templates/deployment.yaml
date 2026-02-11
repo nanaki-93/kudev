@@ -1,0 +1,42 @@
+# templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .AppName }}
+  namespace: {{ .Namespace }}
+  labels:
+    app: {{ .AppName }}
+    managed-by: kudev
+    kudev-hash: {{ .ImageHash }}
+spec:
+  replicas: {{ .Replicas }}
+  selector:
+    matchLabels:
+      app: {{ .AppName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .AppName }}
+        managed-by: kudev
+    spec:
+      containers:
+        - name: {{ .AppName }}
+          image: {{ .ImageRef }}
+          ports:
+            - containerPort: {{ .ServicePort }}
+              name: http
+          {{- if .Env }}
+          env:
+          {{- range .Env }}
+          - name: {{ .Name }}
+            value: "{{ .Value }}"
+          {{- end }}
+          {{- end }}
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"

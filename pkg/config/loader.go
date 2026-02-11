@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// ConfigLoader loads configuration from files.
+// LoaderConfig loads configuration from files.
 //
 // Interface allows multiple implementations (file, env, flags, etc.)
 // in the future.
@@ -130,7 +130,8 @@ func (fcl *FileConfigLoader) LoadFromPath(ctx context.Context, path string) (*De
 	}
 
 	ApplyDefaults(cfg)
-
+	//fixme Do it better
+	cfg.ProjectRoot = fcl.ProjectRoot
 	if err := cfg.Validate(ctx); err != nil {
 		return nil, err
 	}

@@ -9,32 +9,8 @@ import (
 
 	"github.com/nanaki-93/kudev/pkg/builder"
 	"github.com/nanaki-93/kudev/pkg/builder/docker"
-	"github.com/nanaki-93/kudev/pkg/logging"
+	"github.com/nanaki-93/kudev/test/util"
 )
-
-type mockLogger struct {
-	messages []string
-}
-
-func (m *mockLogger) Info(msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-
-func (m *mockLogger) Error(err error, msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-
-func (m *mockLogger) Debug(msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-func (m *mockLogger) Warn(msg string, keysAndValues ...interface{}) {
-	m.messages = append(m.messages, msg)
-}
-func (m *mockLogger) WithValues(keysAndValues ...interface{}) logging.LoggerInterface {
-	return &mockLogger{
-		messages: m.messages,
-	}
-}
 
 func TestDockerBuildIntegration(t *testing.T) {
 	if testing.Short() {
@@ -51,7 +27,7 @@ RUN echo "test"
 		t.Fatalf("failed to write Dockerfile: %v", err)
 	}
 
-	logger := &mockLogger{}
+	logger := &util.MockLogger{}
 	db := docker.NewBuilder(logger)
 
 	opts := builder.BuildOptions{
