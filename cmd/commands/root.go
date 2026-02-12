@@ -2,12 +2,14 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/nanaki-93/kudev/pkg/config"
+	kudevErrors "github.com/nanaki-93/kudev/pkg/errors"
 	"github.com/nanaki-93/kudev/pkg/kubeconfig"
 	"github.com/nanaki-93/kudev/pkg/logging"
 	"github.com/spf13/cobra"
@@ -134,8 +136,18 @@ func GetValidator() *kubeconfig.ContextValidator {
 
 // Execute runs the root command.
 // This is called from main().
-func Execute() error {
+func Execute() int {
 	// Create context that cancels on SIGINT/SIGTERM
+	ctx := setupSignalContext()
+
+	err := rootCmd.ExecuteContext(ctx)
+	if err == nil {
+		return 0
+	}
+	// Pass context to all commands
+	return handleError(err)
+}
+func setupSignalContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -155,11 +167,34 @@ func Execute() error {
 		fmt.Println("\nForce exit...")
 		os.Exit(1)
 	}()
-
-	// Pass context to all commands
-	return rootCmd.ExecuteContext(ctx)
+	return ctx
 }
 
+func handleError(err error) int {
+	// Check if it's a kudev error
+	var kerr kudevErrors.KudevError
+	if errors.As(err, &kerr) {
+		printKudevError(kerr)
+		return kerr.ExitCode()
+	}
+
+	// Generic error
+	fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
+	return 1
+}
+
+// printKudevError prints a formatted kudev error.
+func printKudevError(err kudevErrors.KudevError) {
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintf(os.Stderr, "❌ Error: %s\n", err.UserMessage())
+
+	if suggestion := err.SuggestedAction(); suggestion != "" {
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintf(os.Stderr, "💡 Suggestion: %s\n", suggestion)
+	}
+
+	fmt.Fprintln(os.Stderr)
+}
 func getKubernetesClient() (kubernetes.Interface, *rest.Config, error) {
 	// Load kubeconfig from default location (~/.kube/config)
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
